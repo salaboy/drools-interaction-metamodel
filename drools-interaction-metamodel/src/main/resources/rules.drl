@@ -1,0 +1,40 @@
+package  org.drools.interaction;
+
+import org.drools.interaction.domain.*;
+import org.drools.interaction.domain.items.*;
+import org.drools.interaction.domain.items.values.*;
+import org.drools.interaction.domain.items.validation.*;
+
+query "allMissingValuesByExchange" (String $exchangeId)
+    $missingValue: MissingValue(exchangeId == $exchangeId)
+end
+
+rule "Check for completion"
+    when
+        $e: Exchange( $id: id )
+        forall( Item ($itemId: id)
+                Value( itemId == $itemId)
+                )
+        $s: Status(exchangeId == $id, percentage < 100)        
+    then
+        $s.setPercentage(100);
+        update($s);
+end
+
+rule "Retract completed Exchanges"
+    when
+        $e: Exchange( $id: id )
+        $s: Status(exchangeId == $id, percentage == 100) 
+    then
+        retract($e);
+end
+
+rule "Value Check"
+    when
+        Exchange($exchangeId: id)
+        Item($itemId: id)
+        not( Value(itemId == $itemId))
+    then
+        insertLogical(new MissingValue($exchangeId, $itemId));
+end
+
